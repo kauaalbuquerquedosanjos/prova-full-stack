@@ -10,7 +10,7 @@ const app = express();
 const PORT = 3000;
 
 // Conexão com o MongoDB Atlas
-const mongoURI = "mongodb+srv://kaua:Kaua4595@kauaalbuquerquedosanjos.myryjlm.mongodb.net/?appName=KauaAlbuquerquedosAnjos";
+const mongoURI = process.env.MONGODB_URI;
 
 mongoose.connect(mongoURI)
   .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
@@ -24,6 +24,7 @@ const produtoSchema = new mongoose.Schema({
   preco: Number, 
   categoria: String 
 });
+
 const Produto = mongoose.model('Produto', produtoSchema);
 
 const clienteSchema = new mongoose.Schema({ 
@@ -32,6 +33,7 @@ const clienteSchema = new mongoose.Schema({
   email: String, 
   telefone: String 
 });
+
 const Cliente = mongoose.model('Cliente', clienteSchema);
 
 const itemPedidoSchema = new mongoose.Schema({ 
@@ -39,12 +41,14 @@ const itemPedidoSchema = new mongoose.Schema({
   quantidade: Number, 
   preco_unitario: Number 
 });
+
 const pedidoSchema = new mongoose.Schema({ 
   id_pedido: Number, 
   id_cliente: Number, 
   status_pedido: String, 
   itens: [itemPedidoSchema] 
 });
+
 const Pedido = mongoose.model('Pedido', pedidoSchema);
 
 // Middlewares
@@ -64,7 +68,10 @@ app.get('/api/relatorio-vendas', async (req, res) => {
     
     const relatorio = pedidos.map(pedido => {
       const cliente = clientes.find(c => c.id_cliente === pedido.id_cliente);
-      const totalPedido = pedido.itens.reduce((acc, item) => acc + (item.quantidade * item.preco_unitario), 0);
+      const totalPedido = pedido.itens.reduce(
+        (acc, item) => acc + (item.quantidade * item.preco_unitario), 
+        0
+      );
       
       return {
         id_pedido: pedido.id_pedido,
@@ -87,6 +94,7 @@ app.get('/api/estoque', async (req, res) => {
 
     const estoqueComVendas = produtos.map(prod => {
       let totalVendido = 0;
+
       pedidos.forEach(ped => {
         ped.itens.forEach(item => {
           if (item.id_produto === prod.id_produto) {
@@ -114,7 +122,9 @@ app.put('/api/produtos/:id_produto', async (req, res) => {
   const nivelAcesso = req.headers['user-level'];
 
   if (nivelAcesso === 'Client') {
-    return res.status(403).json({ erro: 'Acesso negado: Clientes possuem apenas permissão de visualização e não podem alterar dados.' });
+    return res.status(403).json({ 
+      erro: 'Acesso negado: Clientes possuem apenas permissão de visualização e não podem alterar dados.' 
+    });
   }
 
   const { id_produto } = req.params;
@@ -142,15 +152,22 @@ app.delete('/api/clientes/:id', async (req, res) => {
   const nivelAcesso = req.headers['user-level'];
 
   if (nivelAcesso === 'Client') {
-    return res.status(403).json({ erro: 'Acesso negado: Clientes possuem apenas permissão de visualização e não podem excluir registros.' });
+    return res.status(403).json({ 
+      erro: 'Acesso negado: Clientes possuem apenas permissão de visualização e não podem excluir registros.' 
+    });
   }
 
   const { id } = req.params;
+
   try {
-    const clienteDeletado = await Cliente.findOneAndDelete({ id_cliente: Number(id) });
+    const clienteDeletado = await Cliente.findOneAndDelete({ 
+      id_cliente: Number(id) 
+    });
+
     if (!clienteDeletado) {
       return res.status(404).json({ erro: 'Cliente não encontrado.' });
     }
+
     res.json({ mensagem: 'Cliente excluído com sucesso!' });
   } catch (error) {
     res.status(500).json({ erro: error.message });
