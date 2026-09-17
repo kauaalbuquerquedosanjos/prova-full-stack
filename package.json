@@ -1,0 +1,10 @@
+{
+  "name": "techshop",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongoose": "^8.3.1",
+    "mysql2": "^3.9.7"
+  }
+}
