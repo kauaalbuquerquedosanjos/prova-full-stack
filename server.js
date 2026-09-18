@@ -9,11 +9,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-// Conexão com o MongoDB Atlas
-const mongoURI = process.env.MONGODB_URI;
+// CONEXÃO DIRETA COM A SUA STRING DO MONGO ATLAS
+const mongoURI = "mongodb+srv://kaua:Kaua4595@kauaalbuquerquedosanjos.myryjlm.mongodb.net/techshop?retryWrites=true&w=majority&appName=KauaAlbuquerquedosAnjos";
 
 mongoose.connect(mongoURI)
-  .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
+  .then(() => {
+    console.log("Conectado ao MongoDB Atlas com sucesso!");
+    popularBancoDeDados();
+  })
   .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
 // Schemas e Models
@@ -50,6 +53,51 @@ const pedidoSchema = new mongoose.Schema({
 });
 
 const Pedido = mongoose.model('Pedido', pedidoSchema);
+
+// Função automática para preencher o MongoDB para a prova
+async function popularBancoDeDados() {
+  try {
+    const totalProdutos = await Produto.countDocuments();
+    if (totalProdutos === 0) {
+      console.log("Banco vazio! Inserindo dados de teste...");
+      
+      // Inserir Produtos
+      await Produto.insertMany([
+        { id_produto: 1, nome_produto: "Mouse Gamer", estoque: 15, preco: 150, categoria: "Periféricos" },
+        { id_produto: 2, nome_produto: "Teclado Mecânico", estoque: 8, preco: 350, categoria: "Periféricos" },
+        { id_produto: 3, nome_produto: "Monitor 24'", estoque: 5, preco: 899, categoria: "Monitores" }
+      ]);
+
+      // Inserir Clientes
+      await Cliente.insertMany([
+        { id_cliente: 10, nome: "Kauan Albuquerque", email: "kauan@email.com", telefone: "11999999999" },
+        { id_cliente: 11, nome: "Ana Clara", email: "ana@email.com", telefone: "11888888888" }
+      ]);
+
+      // Inserir Pedidos
+      await Pedido.insertMany([
+        { 
+          id_pedido: 100, 
+          id_cliente: 10, 
+          status_pedido: "Entregue", 
+          itens: [{ id_produto: 1, quantidade: 2, preco_unitario: 150 }] 
+        },
+        { 
+          id_pedido: 101, 
+          id_cliente: 11, 
+          status_pedido: "Pendente", 
+          itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
+        }
+      ]);
+
+      console.log("Dados de teste inseridos com sucesso no MongoDB Atlas!");
+    } else {
+      console.log("O banco já possui dados cadastrados.");
+    }
+  } catch (error) {
+    console.error("Erro ao popular o banco:", error);
+  }
+}
 
 // Middlewares
 app.use(express.json());
@@ -180,6 +228,6 @@ export default app;
 // Só roda o app.listen se NÃO estiver rodando dentro do ambiente da Vercel
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`Servidor local rodando em http://localhost:${PORT}`);
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
   });
 }
