@@ -174,6 +174,12 @@ app.delete('/api/clientes/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+// Exporta o app para a Vercel gerenciar em modo Serverless
+export default app;
+
+// Só roda o app.listen se NÃO estiver rodando dentro do ambiente da Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Servidor local rodando em http://localhost:${PORT}`);
+  });
+}
