@@ -99,13 +99,13 @@ async function popularBancoDeDados() {
   }
 }
 
-// Middlewares
+// Middlewares - ATUALIZADOS PARA A RAIZ
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
-// Rota raiz para carregar o front-end na URL principal
+// Rota raiz para carregar o front-end na URL principal - ATUALIZADO PARA A RAIZ
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Rotas da API
