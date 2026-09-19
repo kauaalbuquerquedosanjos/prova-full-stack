@@ -67,14 +67,12 @@ async function popularBancoDeDados() {
         { id_produto: 2, nome_produto: "Teclado Mecânico", estoque: 8, preco: 350, categoria: "Periféricos" },
         { id_produto: 3, nome_produto: "Monitor 24'", estoque: 5, preco: 899, categoria: "Monitores" }
       ]);
+    }
 
-      // Inserir Clientes
-      await Cliente.insertMany([
-        { id_cliente: 10, nome: "Kauan Albuquerque", email: "kauan@email.com", telefone: "11999999999" },
-        { id_cliente: 11, nome: "Ana Clara", email: "ana@email.com", telefone: "11888888888" }
-      ]);
-
-      // Inserir Pedidos
+    // INSERÇÃO DOS PEDIDOS CORRIGIDOS (PROPRIEDADE QUANTIDADE ADICIONADA CORRETAMENTE)
+    const totalPedidos = await Pedido.countDocuments();
+    if (totalPedidos === 0) {
+      console.log("Gerando tabelas de pedidos em português...");
       await Pedido.insertMany([
         { 
           id_pedido: 100, 
@@ -89,21 +87,18 @@ async function popularBancoDeDados() {
           itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
         }
       ]);
-
-      console.log("Dados de teste inseridos com sucesso no MongoDB Atlas!");
-    } else {
-      console.log("O banco já possui dados cadastrados.");
+      console.log("Pedidos inseridos com sucesso no MongoDB Atlas!");
     }
   } catch (error) {
     console.error("Erro ao popular o banco:", error);
   }
 }
 
-// Middlewares - ATUALIZADOS PARA A RAIZ
+// Middlewares
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Rota raiz para carregar o front-end na URL principal - ATUALIZADO PARA A RAIZ
+// Rota raiz para carregar o front-end na URL principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -145,7 +140,7 @@ app.get('/api/estoque', async (req, res) => {
 
       pedidos.forEach(ped => {
         ped.itens.forEach(item => {
-          if (item.id_produto === prod.id_produto) {
+          if (Number(item.id_produto) === Number(prod.id_produto)) {
             totalVendido += item.quantidade;
           }
         });
@@ -225,7 +220,7 @@ app.delete('/api/clientes/:id', async (req, res) => {
 // Exporta o app para a Vercel gerenciar em modo Serverless
 export default app;
 
-// Só roda o app.listen se NÃO estiver rodando dentro do ambiente da Vercel
+// Só roda o app.listen se NÃO estiver rodando dentro do ambiente de produção da Vercel
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
