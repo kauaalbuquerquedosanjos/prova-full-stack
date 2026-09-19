@@ -9,15 +9,38 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-// CONEXÃO DIRETA COM A SUA STRING DO MONGO ATLAS
 const mongoURI = "mongodb+srv://kaua:Kaua4595@kauaalbuquerquedosanjos.myryjlm.mongodb.net/techshop?retryWrites=true&w=majority&appName=KauaAlbuquerquedosAnjos";
 
-mongoose.connect(mongoURI)
-  .then(() => {
+// CORREÇÃO PROTOCOLO VERCEL: Garante conexão ativa e estável em ambiente Serverless
+let conectado = false;
+async function conectarBanco() {
+  if (mongoose.connection.readyState >= 1) return;
+  try {
+    await mongoose.connect(mongoURI, {
+      bufferCommands: false,
+    });
     console.log("Conectado ao MongoDB Atlas com sucesso!");
-    popularBancoDeDados();
-  })
-  .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
+    
+    // Só popula se for a primeira inicialização absoluta
+    if (!conectado) {
+      await popularBancoDeDados();
+      conectado = true;
+    }
+  } catch (err) {
+    console.error("Erro ao conectar ao MongoDB:", err);
+    throw err;
+  }
+}
+
+// Middleware obrigatório na Vercel para conectar antes de responder às rotas
+app.use(async (req, res, next) => {
+  try {
+    await conectarBanco();
+    next();
+  } catch (error) {
+    res.status(500).json({ erro: "Erro ao conectar ao banco de dados" });
+  }
+});
 
 // Schemas e Models
 const produtoSchema = new mongoose.Schema({ 
@@ -28,7 +51,8 @@ const produtoSchema = new mongoose.Schema({
   categoria: String 
 });
 
-const Produto = mongoose.model('Produto', produtoSchema);
+// Evita erro de OverwriteModelError comum na Vercel ao recarregar arquivos
+const Produto = mongoose.models.Produto || mongoose.model('Produto', produtoSchema);
 
 const clienteSchema = new mongoose.Schema({ 
   id_cliente: Number, 
@@ -37,7 +61,7 @@ const clienteSchema = new mongoose.Schema({
   telefone: String 
 });
 
-const Cliente = mongoose.model('Cliente', clienteSchema);
+const Cliente = mongoose.models.Cliente || mongoose.model('Cliente', clienteSchema);
 
 const itemPedidoSchema = new mongoose.Schema({ 
   id_produto: Number, 
@@ -52,16 +76,14 @@ const pedidoSchema = new mongoose.Schema({
   itens: [itemPedidoSchema] 
 });
 
-const Pedido = mongoose.model('Pedido', pedidoSchema);
+const Pedido = mongoose.models.Pedido || mongoose.model('Pedido', pedidoSchema);
 
-// Função automática para preencher o MongoDB para a prova
+// Função automática para preencher o MongoDB otimizada para Serverless
 async function popularBancoDeDados() {
   try {
     const totalProdutos = await Produto.countDocuments();
     if (totalProdutos === 0) {
       console.log("Banco vazio! Inserindo dados de teste...");
-      
-      // Inserir Produtos
       await Produto.insertMany([
         { id_produto: 1, nome_produto: "Mouse Gamer", estoque: 15, preco: 150, categoria: "Periféricos" },
         { id_produto: 2, nome_produto: "Teclado Mecânico", estoque: 8, preco: 350, categoria: "Periféricos" },
@@ -69,44 +91,23 @@ async function popularBancoDeDados() {
       ]);
     }
 
-    // ATUALIZAÇÃO EXATA: Cadastra exatamente 4 compras selecionadas
-    console.log("Sincronizando tabela para conter exatamente 4 vendas...");
-    await Pedido.deleteMany({}); // Reseta o histórico anterior
-    
-    await Pedido.insertMany([
-      { 
-        id_pedido: 100, 
-        id_cliente: 10, // Kauã (Compra 1)
-        status_pedido: "Entregue", 
-        itens: [{ id_produto: 1, quantidade: 2, preco_unitario: 150 }] 
-      },
-      { 
-        id_pedido: 101, 
-        id_cliente: 11, // Ana Clara (Compra 2)
-        status_pedido: "Pendente", 
-        itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
-      },
-      { 
-        id_pedido: 102, 
-        id_cliente: 12, // Marcos Silva (Compra 3 para o Professor testar)
-        status_pedido: "Entregue", 
-        itens: [{ id_produto: 1, quantidade: 1, preco_unitario: 150 }] 
-      },
-      { 
-        id_pedido: 103, 
-        id_cliente: 15, // Marcio Souza (Compra 4 para você testar a exclusão)
-        status_pedido: "Pendente", 
-        itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
-      }
-    ]);
-    
-    console.log("4 compras cadastradas com sucesso no MongoDB Atlas!");
+    const totalPedidos = await Pedido.countDocuments();
+    if (totalPedidos === 0) {
+      console.log("Sincronizando tabela para conter exatamente 4 vendas...");
+      await Pedido.insertMany([
+        { id_pedido: 100, id_cliente: 10, status_pedido: "Entregue", itens: [{ id_produto: 1, quantidade: 2, preco_unitario: 150 }] },
+        { id_pedido: 101, id_cliente: 11, status_pedido: "Pendente", itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] },
+        { id_pedido: 102, id_cliente: 12, status_pedido: "Entregue", itens: [{ id_produto: 1, quantidade: 1, preco_unitario: 150 }] },
+        { id_pedido: 103, id_cliente: 15, status_pedido: "Pendente", itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] }
+      ]);
+      console.log("4 compras cadastradas com sucesso no MongoDB Atlas!");
+    }
   } catch (error) {
     console.error("Erro ao popular o banco:", error);
   }
 }
 
-// Middlewares
+// Middlewares adicionais
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -206,7 +207,7 @@ app.put('/api/produtos/:id_produto', async (req, res) => {
       return res.status(404).json({ erro: 'Produto não encontrado.' });
     }
 
-    res.json({ mensagem: 'Estoque atualizado com sucesso!' });
+    res.json({ mensagem: 'Estoque updated com sucesso!' });
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }
