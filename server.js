@@ -69,26 +69,38 @@ async function popularBancoDeDados() {
       ]);
     }
 
-    // INSERÇÃO DOS PEDIDOS CORRIGIDOS (PROPRIEDADE QUANTIDADE ADICIONADA CORRETAMENTE)
-    const totalPedidos = await Pedido.countDocuments();
-    if (totalPedidos === 0) {
-      console.log("Gerando tabelas de pedidos em português...");
-      await Pedido.insertMany([
-        { 
-          id_pedido: 100, 
-          id_cliente: 10, 
-          status_pedido: "Entregue", 
-          itens: [{ id_produto: 1, quantidade: 2, preco_unitario: 150 }] 
-        },
-        { 
-          id_pedido: 101, 
-          id_cliente: 11, 
-          status_pedido: "Pendente", 
-          itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
-        }
-      ]);
-      console.log("Pedidos inseridos com sucesso no MongoDB Atlas!");
-    }
+    // ATUALIZAÇÃO EXATA: Cadastra exatamente 4 compras selecionadas
+    console.log("Sincronizando tabela para conter exatamente 4 vendas...");
+    await Pedido.deleteMany({}); // Reseta o histórico anterior
+    
+    await Pedido.insertMany([
+      { 
+        id_pedido: 100, 
+        id_cliente: 10, // Kauã (Compra 1)
+        status_pedido: "Entregue", 
+        itens: [{ id_produto: 1, quantidade: 2, preco_unitario: 150 }] 
+      },
+      { 
+        id_pedido: 101, 
+        id_cliente: 11, // Ana Clara (Compra 2)
+        status_pedido: "Pendente", 
+        itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
+      },
+      { 
+        id_pedido: 102, 
+        id_cliente: 12, // Marcos Silva (Compra 3 para o Professor testar)
+        status_pedido: "Entregue", 
+        itens: [{ id_produto: 1, quantidade: 1, preco_unitario: 150 }] 
+      },
+      { 
+        id_pedido: 103, 
+        id_cliente: 15, // Marcio Souza (Compra 4 para você testar a exclusão)
+        status_pedido: "Pendente", 
+        itens: [{ id_produto: 2, quantidade: 1, preco_unitario: 350 }] 
+      }
+    ]);
+    
+    console.log("4 compras cadastradas com sucesso no MongoDB Atlas!");
   } catch (error) {
     console.error("Erro ao popular o banco:", error);
   }
@@ -103,7 +115,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// NOVA ROTA ADICIONADA: Retorna todos os clientes cadastrados no banco NoSQL
+// Rota para retornar todos os clientes cadastrados no banco NoSQL
 app.get('/api/clientes', async (req, res) => {
   try {
     const clientes = await Cliente.find({});
@@ -128,7 +140,7 @@ app.get('/api/relatorio-vendas', async (req, res) => {
       
       return {
         id_pedido: pedido.id_pedido,
-        nome_cliente: cliente ? cliente.nome : 'Cliente Desconhecido',
+        nome_cliente: cliente ? cliente.nome : 'Cliente Removido/Inexistente',
         total_pedido: totalPedido,
         status_pedido: pedido.status_pedido
       };
@@ -194,7 +206,7 @@ app.put('/api/produtos/:id_produto', async (req, res) => {
       return res.status(404).json({ erro: 'Produto não encontrado.' });
     }
 
-    res.json({ mensagem: 'Estoque updated com sucesso!' });
+    res.json({ mensagem: 'Estoque atualizado com sucesso!' });
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }
