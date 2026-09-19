@@ -103,6 +103,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// NOVA ROTA ADICIONADA: Retorna todos os clientes cadastrados no banco NoSQL
+app.get('/api/clientes', async (req, res) => {
+  try {
+    const clientes = await Cliente.find({});
+    res.json(clientes);
+  } catch (error) {
+    res.status(500).json({ erro: error.message });
+  }
+});
+
 // Rotas da API
 app.get('/api/relatorio-vendas', async (req, res) => {
   try {
@@ -184,7 +194,7 @@ app.put('/api/produtos/:id_produto', async (req, res) => {
       return res.status(404).json({ erro: 'Produto não encontrado.' });
     }
 
-    res.json({ mensagem: 'Estoque atualizado com sucesso!' });
+    res.json({ mensagem: 'Estoque updated com sucesso!' });
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }
